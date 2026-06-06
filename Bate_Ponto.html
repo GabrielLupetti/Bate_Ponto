@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ponto & Foco</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --disabled: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header / Calendário */
+        .header {
+            text-align: center;
+        }
+
+        .date-picker {
+            background-color: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .date-picker::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        /* Botões de Ação */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:disabled {
+            background-color: var(--disabled) !important;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:not(:disabled):active {
+            transform: scale(0.98);
+        }
+
+        #btn-checkin {
+            background-color: var(--accent-green);
+        }
+
+        #btn-pause {
+            background-color: var(--accent-yellow);
+        }
+
+        #btn-return {
+            background-color: var(--accent-blue);
+        }
+
+        #btn-checkout {
+            background-color: var(--accent-red);
+        }
+
+        /* Dashboard de Métricas */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .stats-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-item span {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-item strong {
+            font-size: 1.4rem;
+            color: var(--text-main);
+        }
+
+        /* Responsividade */
+        @media (max-width: 600px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header card">
+            <input type="date" id="today-date" class="date-picker">
+        </div>
+
+        <div class="action-buttons">
+            <button id="btn-checkin" class="btn" onclick="registrarPonto('checkin')">Fazer Check-in</button>
+            <button id="btn-pause" class="btn" onclick="registrarPonto('pausa')" disabled>Pausa para Almoço</button>
+            <button id="btn-return" class="btn" onclick="registrarPonto('retorno')" disabled>Voltar do Almoço</button>
+            <button id="btn-checkout" class="btn" onclick="registrarPonto('checkout')" disabled>Fazer Check-out</button>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h3>Rendimento Semanal (Horas)</h3>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span>Total da Semana</span>
+                    <strong>38h 15m</strong>
+                </div>
+                <div class="stat-item">
+                    <span>Média por Dia</span>
+                    <strong>07h 40m</strong>
+                </div>
+                <div class="stat-item">
+                    <span>Média de Almoço</span>
+                    <strong>01h 05m</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Configurar data de hoje no topo
+        const dateInput = document.getElementById('today-date');
+        const hoje = new Date().toISOString().split('T')[0];
+        dateInput.value = hoje;
+
+        // 2. Lógica Sequencial dos Botões
+        const steps = ['checkin', 'pausa', 'retorno', 'checkout'];
+        let currentStep = 0; // 0 = aguardando check-in
+
+        function registrarPonto(acao) {
+            // Cole aqui a URL que você copiou do Apps Script no Passo 1
+            const appsScriptUrl = "SUA_URL_DO_APPS_SCRIPT_AQUI";
+            const timestamp = new Date().toISOString();
+
+            // Envia os dados direto para a planilha
+            fetch(appsScriptUrl, {
+                method: 'POST',
+                mode: 'no-cors', // Evita problemas de redirecionamento de CORS do Google
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    acao: acao,
+                    data: dateInput.value,
+                    hora_exata: timestamp
+                })
+            })
+                .then(() => {
+                    console.log(`Sucesso: ${acao} registrado na planilha.`);
+                })
+                .catch(err => {
+                    console.error('Erro ao enviar dados para a planilha:', err);
+                });
+
+            // Avança o fluxo visual dos botões na tela
+            avancarFluxo();
+        }
+
+        function avancarFluxo() {
+            // Desabilita todos primeiro
+            document.getElementById('btn-checkin').disabled = true;
+            document.getElementById('btn-pause').disabled = true;
+            document.getElementById('btn-return').disabled = true;
+            document.getElementById('btn-checkout').disabled = true;
+
+            currentStep++;
+
+            // Habilita apenas o próximo passo
+            if (currentStep === 1) document.getElementById('btn-pause').disabled = false;
+            else if (currentStep === 2) document.getElementById('btn-return').disabled = false;
+            else if (currentStep === 3) document.getElementById('btn-checkout').disabled = false;
+            else if (currentStep >= 4) {
+                alert("Dia finalizado! Bom descanso.");
+                // Opcional: currentStep = 0 para reiniciar no dia seguinte
+            }
+        }
+
+        // 3. Renderização do Gráfico (Dados Mockados para visualização)
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                datasets: [{
+                    label: 'Horas Trabalhadas',
+                    data: [8.5, 7.2, 9.0, 8.1, 5.5, 0, 0], // Exemplo em formato decimal
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)', // Azul
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Transforma em gráfico de barras horizontais
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#a0a0a0' },
+                        max: 12 // Máximo de 12 horas no eixo X para dar margem
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#a0a0a0' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
