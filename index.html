@@ -1,227 +1,155 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ponto & Foco</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #ffffff;
-            --text-muted: #a0a0a0;
-            --accent-green: #10b981;
-            --accent-yellow: #f59e0b;
-            --accent-blue: #3b82f6;
-            --accent-red: #ef4444;
-            --disabled: #333333;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .container {
-            max-width: 800px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* Header / Calendário */
-        .header {
-            text-align: center;
-        }
-
-        .date-picker {
-            background-color: transparent;
-            border: none;
-            color: var(--text-main);
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-align: center;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .date-picker::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
-        }
-
-        /* Botões de Ação */
-        .action-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .btn {
-            padding: 1.2rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn:disabled {
-            background-color: var(--disabled) !important;
-            color: #666;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn:not(:disabled):active {
-            transform: scale(0.98);
-        }
-
-        #btn-checkin {
-            background-color: var(--accent-green);
-        }
-
-        #btn-pause {
-            background-color: var(--accent-yellow);
-        }
-
-        #btn-return {
-            background-color: var(--accent-blue);
-        }
-
-        #btn-checkout {
-            background-color: var(--accent-red);
-        }
-
-        /* Dashboard de Métricas */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        .card h3 {
-            font-size: 1rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-            font-weight: 500;
-        }
-
-        .stats-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .stat-item {
-            background-color: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-item span {
-            display: block;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 0.3rem;
-        }
-
-        .stat-item strong {
-            font-size: 1.4rem;
-            color: var(--text-main);
-        }
-
-        /* Responsividade */
-        @media (max-width: 600px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <title>Controle de Ponto Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-gray-100 font-sans min-h-screen text-gray-800">
 
-<body>
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Meu Controle de Ponto</h1>
+                <p class="text-sm text-gray-500">Conexão direta com o Google Sheets</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex items-center gap-4">
+                <input type="date" id="date-input" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-inner font-semibold">
+                <div id="relogio" class="text-xl font-mono font-bold bg-gray-900 text-emerald-400 px-4 py-2 rounded-xl shadow-md">00:00:00</div>
+            </div>
+        </header>
 
-    <div class="container">
-        <div class="header card">
-            <input type="date" id="today-date" class="date-picker">
-        </div>
-
-        <div class="action-buttons">
-            <button id="btn-checkin" class="btn" onclick="registrarPonto('checkin')">Fazer Check-in</button>
-            <button id="btn-pause" class="btn" onclick="registrarPonto('pausa')" disabled>Pausa para Almoço</button>
-            <button id="btn-return" class="btn" onclick="registrarPonto('retorno')" disabled>Voltar do Almoço</button>
-            <button id="btn-checkout" class="btn" onclick="registrarPonto('checkout')" disabled>Fazer Check-out</button>
-        </div>
-
-        <div class="dashboard">
-            <div class="card">
-                <h3>Rendimento Semanal (Horas)</h3>
-                <canvas id="weeklyChart"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="w-2 h-4 bg-blue-600 rounded-full"></span> Registrar Horário
+                </h2>
+                
+                <div class="flex flex-col gap-3">
+                    <button onclick="registrarPonto('checkin')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                        <span>Fazer Check-in</span>
+                        <span class="text-xs bg-emerald-500 px-2 py-1 rounded">Entrada</span>
+                    </button>
+                    
+                    <button onclick="registrarPonto('pausa')" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                        <span>Pausa Almoço</span>
+                        <span class="text-xs bg-amber-400 px-2 py-1 rounded">Saída Almoço</span>
+                    </button>
+                    
+                    <button onclick="registrarPonto('retorno')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                        <span>Retorno Almoço</span>
+                        <span class="text-xs bg-indigo-500 px-2 py-1 rounded">Volta Almoço</span>
+                    </button>
+                    
+                    <button onclick="registrarPonto('checkout')" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                        <span>Fazer Check-out</span>
+                        <span class="text-xs bg-rose-500 px-2 py-1 rounded">Saída</span>
+                    </button>
+                </div>
+                
+                <p id="status-envio" class="text-center text-sm font-medium mt-4 text-gray-500 hidden"></p>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span>Total da Semana</span>
-                    <strong>38h 15m</strong>
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Dias Registrados</p>
+                        <p id="card-total-dias" class="text-3xl font-bold text-gray-900 mt-1">--</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Última Entrada</p>
+                        <p id="card-ultimo-checkin" class="text-3xl font-bold text-emerald-600 mt-1">--:--</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Última Saída</p>
+                        <p id="card-ultimo-checkout" class="text-3xl font-bold text-rose-600 mt-1">--:--</p>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <span>Média por Dia</span>
-                    <strong>07h 40m</strong>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex-1">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <span class="w-2 h-4 bg-emerald-500 rounded-full"></span> Histórico de Registros
+                        </h2>
+                        <button onclick="carregarDadosDashboard()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-1.5 px-3 rounded-lg border border-gray-200 transition">
+                            Atualizar Tabela
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 border-b border-gray-100">
+                                <tr>
+                                    <th class="px-6 py-3">Data</th>
+                                    <th class="px-6 py-3">Entrada</th>
+                                    <th class="px-6 py-3">Almoço</th>
+                                    <th class="px-6 py-3">Retorno</th>
+                                    <th class="px-6 py-3">Saída</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-historico">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-gray-400">Carregando dados da planilha...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <span>Média de Almoço</span>
-                    <strong>01h 05m</strong>
-                </div>
+
             </div>
         </div>
     </div>
 
     <script>
-        // 1. Configurar data de hoje no topo
-        const dateInput = document.getElementById('today-date');
-        const hoje = new Date().toISOString().split('T')[0];
-        dateInput.value = hoje;
+        // ==========================================
+        // SUBSTUIA AQUI PELA SUA URL DO APPS SCRIPT
+        // ==========================================
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwl5haXOIkaQ8nyg1xYHq9bBRWTmlUEhb0kAytd0DZ8UT7wMsZjj9LLdJ8eOIgK31WwVg/exec";
 
-        // 2. Lógica Sequencial dos Botões
-        const steps = ['checkin', 'pausa', 'retorno', 'checkout'];
-        let currentStep = 0; // 0 = aguardando check-in
+        const dateInput = document.getElementById('date-input');
+        const statusEnvio = document.getElementById('status-envio');
 
+        // Configurações Iniciais ao Carregar a Página
+        window.onload = function() {
+            // Define o input de data para o dia atual no fuso local do navegador
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            dateInput.value = `${ano}-${mes}-${dia}`;
+
+            // Inicia o relógio em tempo real
+            setInterval(atualizarRelogio, 1000);
+
+            // Carrega os dados do dashboard vindos da planilha
+            carregarDadosDashboard();
+        };
+
+        // Relógio digital do cabeçalho
+        function atualizarRelogio() {
+            const agora = new Date();
+            document.getElementById('relogio').innerText = agora.toLocaleTimeString('pt-BR');
+        }
+
+        // FUNÇÃO 1: Envia o ponto clicado para a Planilha (POST)
         function registrarPonto(acao) {
-            // Cole aqui a URL que você copiou do Apps Script no Passo 1
-            const appsScriptUrl = "https://script.google.com/macros/s/AKfycbwl5haXOIkaQ8nyg1xYHq9bBRWTmlUEhb0kAytd0DZ8UT7wMsZjj9LLdJ8eOIgK31WwVg/exec";
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("SUA_URL")) {
+                alert("Por favor, configure a URL do seu Apps Script no código HTML.");
+                return;
+            }
+
+            statusEnvio.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
+            statusEnvio.classList.add('text-gray-600');
+            statusEnvio.innerText = "Registrando na planilha... Aguarde.";
+
             const timestamp = new Date().toISOString();
 
-            // Envia os dados direto para a planilha
-            fetch(appsScriptUrl, {
+            fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Evita problemas de redirecionamento de CORS do Google
+                mode: 'no-cors', // Evita restrições de CORS do Google
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     acao: acao,
@@ -229,98 +157,78 @@
                     hora_exata: timestamp
                 })
             })
-                .then(() => {
-                    console.log(`Sucesso: ${acao} registrado na planilha.`);
-                })
-                .catch(err => {
-                    console.error('Erro ao enviar dados para a planilha:', err);
-                });
-
-            // Avança o fluxo visual dos botões na tela
-            avancarFluxo();
-        }
-
-        function avancarFluxo() {
-            // Desabilita todos primeiro
-            document.getElementById('btn-checkin').disabled = true;
-            document.getElementById('btn-pause').disabled = true;
-            document.getElementById('btn-return').disabled = true;
-            document.getElementById('btn-checkout').disabled = true;
-
-            currentStep++;
-
-            // Habilita apenas o próximo passo
-            if (currentStep === 1) document.getElementById('btn-pause').disabled = false;
-            else if (currentStep === 2) document.getElementById('btn-return').disabled = false;
-            else if (currentStep === 3) document.getElementById('btn-checkout').disabled = false;
-            else if (currentStep >= 4) {
-                alert("Dia finalizado! Bom descanso.");
-                // Opcional: currentStep = 0 para reiniciar no dia seguinte
-            }
-        }
-
-        function carregarDadosDashboard() {
-            const appsScriptUrl = "SUA_URL_DO_APPS_SCRIPT_AQUI"; // A mesma URL usada no POST
-
-    // O fetch sem especificar método faz um 'GET' por padrão
-            fetch(appsScriptUrl)
-            .then(response => response.json())
-            .then(resultado => {
-                if (resultado.status === "success") {
-                    console.log("Dados da planilha carregados:", resultado.dados);
-            
-            // Aqui você passa os dados recebidos para renderizar na tela
-                    construirDashboard(resultado.dados);
-                } else {
-                    console.error("Erro no retorno do script:", resultado.message);
-                }
+            .then(() => {
+                statusEnvio.classList.remove('text-gray-600');
+                statusEnvio.classList.add('text-emerald-600');
+                statusEnvio.innerText = `Sucesso! '${acao}' computado.`;
+                
+                // Aguarda 2 segundos e atualiza o dashboard para puxar a nova linha da planilha
+                setTimeout(() => {
+                    statusEnvio.classList.add('hidden');
+                    carregarDadosDashboard();
+                }, 2000);
             })
             .catch(err => {
-                console.error("Erro ao buscar dados da planilha:", err);
+                console.error('Erro ao enviar:', err);
+                statusEnvio.classList.remove('text-gray-600');
+                statusEnvio.classList.add('text-rose-600');
+                statusEnvio.innerText = "Erro ao registrar. Verifique o console.";
             });
         }
 
-// Executa a busca automaticamente assim que a página abre
-        window.onload = function() {
-            carregarDadosDashboard();
-    // Se você tiver outras funções de inicialização, coloque aqui
-        };
+        // FUNÇÃO 2: Busca todos os registros para alimentar o Dashboard (GET)
+        function carregarDadosDashboard() {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("SUA_URL")) return;
 
-        // 3. Renderização do Gráfico (Dados Mockados para visualização)
-        const ctx = document.getElementById('weeklyChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
-                datasets: [{
-                    label: 'Horas Trabalhadas',
-                    data: [8.5, 7.2, 9.0, 8.1, 5.5, 0, 0], // Exemplo em formato decimal
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)', // Azul
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                indexAxis: 'y', // Transforma em gráfico de barras horizontais
-                responsive: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#a0a0a0' },
-                        max: 12 // Máximo de 12 horas no eixo X para dar margem
-                    },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: '#a0a0a0' }
-                    }
+            fetch(APPS_SCRIPT_URL)
+            .then(response => response.json())
+            .then(resultado => {
+                if (resultado.status === "success") {
+                    construirDashboard(resultado.dados);
+                } else {
+                    console.error("Erro no Apps Script:", resultado.message);
                 }
+            })
+            .catch(err => {
+                console.error("Erro ao carregar banco de dados:", err);
+            });
+        }
+
+        // FUNÇÃO 3: Processa os dados recebidos e monta os componentes visuais
+        function construirDashboard(dados) {
+            const tabelaBody = document.getElementById('tabela-historico');
+            
+            // Se a planilha estiver vazia
+            if (!dados || dados.length === 0) {
+                tabelaBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">Nenhum registro encontrado na planilha.</td></tr>`;
+                document.getElementById('card-total-dias').innerText = "0";
+                return;
             }
-        });
+
+            // Atualiza os Cards Superiores baseados nos dados reais
+            document.getElementById('card-total-dias').innerText = dados.length;
+            
+            // Pega o último registro adicionado (mais recente)
+            const ultimoRegistro = dados[dados.length - 1];
+            document.getElementById('card-ultimo-checkin').innerText = ultimoRegistro.checkin || "--:--";
+            document.getElementById('card-ultimo-checkout').innerText = ultimoRegistro.checkout || "--:--";
+
+            // Monta as linhas da tabela de histórico (em ordem inversa para o mais novo aparecer no topo)
+            let htmlLinhas = "";
+            for (let i = dados.length - 1; i >= 0; i--) {
+                const item = dados[i];
+                htmlLinhas += `
+                    <tr class="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-semibold text-gray-900">${item.data}</td>
+                        <td class="px-6 py-4 text-emerald-600 font-medium">${item.checkin || '-'}</td>
+                        <td class="px-6 py-4 text-amber-600">${item.pausa || '-'}</td>
+                        <td class="px-6 py-4 text-indigo-600">${item.retorno || '-'}</td>
+                        <td class="px-6 py-4 text-rose-600 font-medium">${item.checkout || '-'}</td>
+                    </tr>
+                `;
+            }
+            tabelaBody.innerHTML = htmlLinhas;
+        }
     </script>
 </body>
-
 </html>
