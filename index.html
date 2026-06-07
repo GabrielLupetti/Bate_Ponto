@@ -259,6 +259,33 @@
             }
         }
 
+        function carregarDadosDashboard() {
+            const appsScriptUrl = "SUA_URL_DO_APPS_SCRIPT_AQUI"; // A mesma URL usada no POST
+
+    // O fetch sem especificar método faz um 'GET' por padrão
+            fetch(appsScriptUrl)
+            .then(response => response.json())
+            .then(resultado => {
+                if (resultado.status === "success") {
+                    console.log("Dados da planilha carregados:", resultado.dados);
+            
+            // Aqui você passa os dados recebidos para renderizar na tela
+                    construirDashboard(resultado.dados);
+                } else {
+                    console.error("Erro no retorno do script:", resultado.message);
+                }
+            })
+            .catch(err => {
+                console.error("Erro ao buscar dados da planilha:", err);
+            });
+        }
+
+// Executa a busca automaticamente assim que a página abre
+        window.onload = function() {
+            carregarDadosDashboard();
+    // Se você tiver outras funções de inicialização, coloque aqui
+        };
+
         // 3. Renderização do Gráfico (Dados Mockados para visualização)
         const ctx = document.getElementById('weeklyChart').getContext('2d');
         new Chart(ctx, {
