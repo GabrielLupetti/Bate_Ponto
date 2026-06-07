@@ -194,7 +194,16 @@
                     construirDashboard(res.dados);
                 }
             })
-            .catch(err => console.error("Erro na leitura de dados:", err));
+            .catch(err => {
+                console.error("Erro na leitura de dados:", err);
+                document.getElementById('tabela-historico').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-rose-500 font-medium">
+                            ⚠️ Falha de conexão. Verifique se a URL do Apps Script mudou ou se o acesso está configurado para "Qualquer pessoa".
+                        </td>
+                    </tr>
+                `;
+            });
         }
 
         function construirDashboard(dados) {
@@ -230,3 +239,179 @@
             const domingoDaSemana = new Date(segundaDaSemana);
             domingoDaSemana.setDate(segundaDaSemana.getDate() + 6);
             domingoDaSemana.setHours(23,59,59,999);
+
+            let dataTurno1 = Array(7).fill(null);
+            let dataAlmoco = Array(7).fill(null);
+            let dataTurno2 = Array(7).fill(null);
+
+            let minutosTrabalhoPorDia = Array(7).fill(0);
+            let minutosAlmocoPorDia = Array(7).fill(0);
+
+            let contDiasTrabalhados = 0, contDiasAlmoco = 0;
+            let totalMinTrabalhados = 0, totalMinAlmoco = 0;
+
+            let htmlLinhas = "";
+
+            for (let i = dados.length - 1; i >= 0; i--) {
+                const item = dados[i];
+                if (!item || !item.data) continue; // Ignora linhas fantasmas ou em branco na planilha
+                
+                let dataReg;
+                if (item.data.includes("-")) {
+                    const p = item.data.split("-");
+                    dataReg = new Date(p[0], p[1] - 1, p[2]);
+                } else {
+                    const p = item.data.split("/");
+                    dataReg = new Date(p[2], p[1] - 1, p[0]);
+                }
+                dataReg.setHours(0,0,0,0);
+
+                if (dataReg >= segundaDaSemana && dataReg <= domingoDaSemana) {
+                    let dNum = dataReg.getDay();
+                    let idxSemana = dNum === 0 ? 6 : dNum - 1;
+
+                    const entry = timeToMinutes(item.checkin);
+                    const breakStart = timeToMinutes(item.pausa);
+                    const breakEnd = timeToMinutes(item.retorno);
+                    const exit = timeToMinutes(item.checkout);
+
+                    if (entry && breakStart) dataTurno1[idxSemana] = [entry, breakStart];
+                    if (breakStart && breakEnd) dataAlmoco[idxSemana] = [breakStart, breakEnd];
+                    if (breakEnd && exit) dataTurno2[idxSemana] = [breakEnd, exit];
+                    
+                    if (entry && exit && !breakStart && !breakEnd) {
+                        dataTurno1[idxSemana] = [entry, exit];
+                    }
+
+                    let diaLiquido = 0;
+                    if (entry && breakStart) diaLiquido += (breakStart - entry);
+                    if (breakEnd && exit) diaLiquido += (exit - breakEnd);
+                    if (entry && exit && !breakStart && !breakEnd) diaLiquido = (exit - entry);
+
+                    let diaAlmoco = (breakStart && breakEnd) ? (breakEnd - breakStart) : 0;
+
+                    if (diaLiquido > 0) {
+                        minutosTrabalhoPorDia[idxSemana] = diaLiquido;
+                        totalMinTrabalhados += diaLiquido;
+                        contDiasTrabalhados++;
+                    }
+                    if (diaAlmoco > 0) {
+                        minutosAlmocoPorDia[idxSemana] = diaAlmoco;
+                        totalMinAlmoco += diaAlmoco;
+                        contDiasAlmoco++;
+                    }
+                }
+
+                htmlLinhas += `
+                    <tr class="border-b border-gray-900/40 bg-[#121212] hover:bg-[#161616] transition">
+                        <td class="px-6 py-3.5 text-white font-medium">${item.data}</td>
+                        <td class="px-6 py-3.5 text-emerald-400 font-mono">${item.checkin || '-'}</td>
+                        <td class="px-6 py-3.5 text-amber-500 font-mono">${item.pausa || '-'}</td>
+                        <td class="px-6 py-3.5 text-indigo-400 font-mono">${item.retorno || '-'}</td>
+                        <td class="px-6 py-3.5 text-rose-400 font-mono">${item.checkout || '-'}</td>
+                    </tr>
+                `;
+            }
+
+            tabelaBody.innerHTML = htmlLinhas;
+
+            const medDia = contDiasTrabalhados > 0 ? (totalMinTrabalhados / contDiasTrabalhados) : 0;
+            const medAlm = contDiasAlmoco > 0 ? (totalMinAlmoco / contDiasAlmoco) : 0;
+
+            document.getElementById('total-semana').innerText = minutesToHoursStr(totalMinTrabalhados);
+            document.getElementById('media-dia').innerText = minutesToHoursStr(medDia);
+            document.getElementById('media-almoco').innerText = minutesToHoursStr(medAlm);
+
+            const ctx = document.getElementById('graficoSemanal').getContext('2d');
+            if (meuGrafico) {
+                meuGrafico.destroy();
+            }
+
+            meuGrafico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [
+                        {
+                            label: 'Trabalho',
+                            data: dataTurno1,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barThickness: 14,
+                            grouped: false
+                        },
+                        {
+                            label: 'Almoço',
+                            data: dataAlmoco,
+                            backgroundColor: '#eab308',
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barThickness: 14,
+                            grouped: false
+                        },
+                        {
+                            label: 'Trabalho',
+                            data: dataTurno2,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barThickness: 14,
+                            grouped: false
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    const label = context.dataset.label;
+                                    let minutosTotais = 0;
+
+                                    if (label === 'Trabalho') {
+                                        minutosTotais = minutosTrabalhoPorDia[idx];
+                                    } else {
+                                        minutosTotais = minutosAlmocoPorDia[idx];
+                                    }
+
+                                    if (minutosTotais === 0) return label + ': 00h 00m';
+                                    const h = Math.floor(minutosTotais / 60);
+                                    const m = minutosTotais % 60;
+                                    return label + ': ' + h + 'h ' + String(m).padStart(2, '0') + 'm';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: 360,  // 06:00
+                            max: 1320, // 22:00
+                            grid: { color: '#1f1f1f' },
+                            ticks: { 
+                                color: '#737373', 
+                                stepSize: 120,
+                                font: { family: 'monospace', size: 10 },
+                                callback: function(value) {
+                                    const h = Math.floor(value / 60);
+                                    return String(h).padStart(2, '0') + ':00';
+                                }
+                            }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#e5e5e5', font: { weight: '600', size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
