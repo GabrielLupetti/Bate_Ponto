@@ -57,7 +57,7 @@
             <div class="lg:col-span-2 bg-[#121212] p-6 rounded-2xl shadow-xl border border-gray-800 flex flex-col sm:flex-row gap-6">
                 
                 <div class="flex-1 bg-[#1a1a1a] p-5 rounded-xl border border-gray-800 flex flex-col">
-                    <h3 class="text-xs font-semibold text-gray-400 mb-4 tracking-wide uppercase">Rendimento Semanal (Horas)</h3>
+                    <h3 class="text-xs font-semibold text-gray-400 mb-4 tracking-wide uppercase">Linha do Tempo Semanal (06h às 22h)</h3>
                     <div class="h-52 relative w-full flex-1">
                         <canvas id="graficoSemanal"></canvas>
                     </div>
@@ -125,25 +125,29 @@
         const statusEnvio = document.getElementById('status-envio');
         let meuGrafico = null;
 
-        // Configuração Inicial no Carregamento
         window.onload = function() {
-            // Seta o calendário padrão do dia no formato ISO local
+            // Define a data inicial como hoje
             const hoje = new Date();
             const ano = hoje.getFullYear();
             const mes = String(hoje.getMonth() + 1).padStart(2, '0');
             const dia = String(hoje.getDate()).padStart(2, '0');
             dateInput.value = `${ano}-${mes}-${dia}`;
 
-            // Start do Relógio
+            // Relógio em tempo real
             setInterval(() => {
                 document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-BR');
             }, 1000);
 
-            // Carrega os dados direto na View
+            // ESCUTADOR DO CALENDÁRIO: Recalcula tudo quando você muda a data
+            dateInput.addEventListener('change', () => {
+                if (window.dadosPlanilha) {
+                    construirDashboard(window.dadosPlanilha);
+                }
+            });
+
             carregarDadosDashboard();
         };
 
-        // Envio do Ponto (POST)
         function registrarPonto(acao) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("SUA_URL")) {
                 alert("Por favor, cole a URL de Implantação do seu Apps Script no código.");
@@ -171,8 +175,8 @@
                 
                 setTimeout(() => {
                     statusEnvio.classList.add('hidden');
-                    carregarDadosDashboard(); // Puxa dados novos do Sheets
-                }, 2000);
+                    carregarDadosDashboard(); 
+                }, 1500);
             })
             .catch(err => {
                 console.error(err);
@@ -182,7 +186,6 @@
             });
         }
 
-        // Leitura do Banco de Dados (GET)
         function carregarDadosDashboard() {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("SUA_URL")) return;
 
@@ -190,13 +193,13 @@
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success") {
+                    window.dadosPlanilha = res.dados; // Cache global para navegação rápida
                     construirDashboard(res.dados);
                 }
             })
             .catch(err => console.error("Erro na leitura de dados:", err));
         }
 
-        // Processamento Matemático e Renderização Visual
         function construirDashboard(dados) {
             const tabelaBody = document.getElementById('tabela-historico');
             if (!dados || dados.length === 0) {
@@ -204,11 +207,13 @@
                 return;
             }
 
-            // Conversão de Strings de tempo para inteiros de minutos
+            // Conversão voltada para minutos inteiros
             function timeToMinutes(str) {
                 if (!str || str === "-") return 0;
                 const p = str.split(":");
-                return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+                const h = parseInt(p[0], 10) || 0;
+                const m = parseInt(p[1], 10) || 0;
+                return (h * 60) + m;
             }
 
             function minutesToHoursStr(totalMin) {
@@ -217,26 +222,34 @@
                 return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
             }
 
-            // Descobrir a Segunda-feira da semana corrente
-            const hoje = new Date();
-            const diaSemana = hoje.getDay();
+            // PEGA A DATA SELECIONADA NO CALENDÁRIO para descobrir o início daquela semana
+            const dataFiltroRaw = dateInput.value;
+            const dataSelecionada = new Date(dataFiltroRaw + 'T00:00:00');
+            const diaSemana = dataSelecionada.getDay();
             const gapSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
-            const segundaDaSemana = new Date(hoje);
-            segundaDaSemana.setDate(hoje.getDate() + gapSegunda);
+            
+            const segundaDaSemana = new Date(dataSelecionada);
+            segundaDaSemana.setDate(dataSelecionada.getDate() + gapSegunda);
             segundaDaSemana.setHours(0,0,0,0);
 
-            // Escala de Segunda (0) a Domingo (6)
-            let minTrabalhadosSemana = [0, 0, 0, 0, 0, 0, 0];
+            const domingoDaSemana = new Date(segundaDaSemana);
+            domingoDaSemana.setDate(segundaDaSemana.getDate() + 6);
+            domingoDaSemana.setHours(23,59,59,999);
+
+            // Vetores para blocos flutuantes do gráfico [Início, Fim] em minutos desde a meia-noite
+            let dataTurno1 = Array(7).fill(null);
+            let dataAlmoco = Array(7).fill(null);
+            let dataTurno2 = Array(7).fill(null);
+
             let contDiasTrabalhados = 0, contDiasAlmoco = 0;
             let totalMinTrabalhados = 0, totalMinAlmoco = 0;
 
             let htmlLinhas = "";
 
-            // Loop invertido para mostrar dados recentes no topo da tabela
+            // Varre o histórico completo
             for (let i = dados.length - 1; i >= 0; i--) {
                 const item = dados[i];
                 
-                // Normaliza a data da linha para objeto Date
                 let dataReg;
                 if (item.data.includes("-")) {
                     const p = item.data.split("-");
@@ -247,8 +260,8 @@
                 }
                 dataReg.setHours(0,0,0,0);
 
-                // Processa métricas caso pertença à semana atual
-                if (dataReg >= segundaDaSemana) {
+                // Valida se o registro está contido na semana selecionada no calendário
+                if (dataReg >= segundaDaSemana && dataReg <= domingoDaSemana) {
                     let dNum = dataReg.getDay();
                     let idxSemana = dNum === 0 ? 6 : dNum - 1;
 
@@ -257,6 +270,17 @@
                     const breakEnd = timeToMinutes(item.retorno);
                     const exit = timeToMinutes(item.checkout);
 
+                    // Preenche os blocos da linha do tempo do gráfico
+                    if (entry && breakStart) dataTurno1[idxSemana] = [entry, breakStart];
+                    if (breakStart && breakEnd) dataAlmoco[idxSemana] = [breakStart, breakEnd];
+                    if (breakEnd && exit) dataTurno2[idxSemana] = [breakEnd, exit];
+                    
+                    // Caso simplificado: bateu entrada/saída direto sem almoço
+                    if (entry && exit && !breakStart && !breakEnd) {
+                        dataTurno1[idxSemana] = [entry, exit];
+                    }
+
+                    // Lógica matemática dos cards líquidos
                     let diaLiquido = 0;
                     if (entry && breakStart) diaLiquido += (breakStart - entry);
                     if (breakEnd && exit) diaLiquido += (exit - breakEnd);
@@ -265,7 +289,6 @@
                     let diaAlmoco = (breakStart && breakEnd) ? (breakEnd - breakStart) : 0;
 
                     if (diaLiquido > 0) {
-                        minTrabalhadosSemana[idxSemana] = diaLiquido;
                         totalMinTrabalhados += diaLiquido;
                         contDiasTrabalhados++;
                     }
@@ -275,7 +298,7 @@
                     }
                 }
 
-                // Linha estruturada da tabela
+                // Alimenta a tabela visual
                 htmlLinhas += `
                     <tr class="border-b border-gray-900/40 bg-[#121212] hover:bg-[#161616] transition">
                         <td class="px-6 py-3.5 text-white font-medium">${item.data}</td>
@@ -289,7 +312,7 @@
 
             tabelaBody.innerHTML = htmlLinhas;
 
-            // Renderiza os Dados nos Cards Superiores
+            // Renderiza textos dos cards superiores
             const medDia = contDiasTrabalhados > 0 ? (totalMinTrabalhados / contDiasTrabalhados) : 0;
             const medAlm = contDiasAlmoco > 0 ? (totalMinAlmoco / contDiasAlmoco) : 0;
 
@@ -297,10 +320,8 @@
             document.getElementById('media-dia').innerText = minutesToHoursStr(medDia);
             document.getElementById('media-almoco').innerText = minutesToHoursStr(medAlm);
 
-            // Configuração do Gráfico Chart.js
-            const dadosHorasDecimais = minTrabalhadosSemana.map(m => parseFloat((m / 60).toFixed(2)));
+            // CONFIGURAÇÃO DA TIMELINE DO CHART.JS
             const ctx = document.getElementById('graficoSemanal').getContext('2d');
-
             if (meuGrafico) {
                 meuGrafico.destroy();
             }
@@ -309,24 +330,73 @@
                 type: 'bar',
                 data: {
                     labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
-                    datasets: [{
-                        data: dadosHorasDecimais,
-                        backgroundColor: '#2563eb',
-                        borderRadius: 4,
-                        barThickness: 12
-                    }]
+                    datasets: [
+                        {
+                            label: 'Período Manhã',
+                            data: dataTurno1,
+                            backgroundColor: '#2563eb', // Azul
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barThickness: 14,
+                            grouped: false // Força os blocos a ficarem na mesma linha
+                        },
+                        {
+                            label: 'Intervalo Almoço',
+                            data: dataAlmoco,
+                            backgroundColor: '#eab308', // Amarelo Destaque
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barThickness: 14,
+                            grouped: false
+                        },
+                        {
+                            label: 'Período Tarde',
+                            data: dataTurno2,
+                            backgroundColor: '#2563eb', // Azul
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            barThickness: 14,
+                            grouped: false
+                        }
+                    ]
                 },
                 options: {
-                    indexAxis: 'y',
+                    indexAxis: 'y', // Gráfico horizontal
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                // Deixa o balão de dica legível com as horas exatas ao passar o mouse
+                                label: function(context) {
+                                    const v = context.raw;
+                                    if (!v || !Array.isArray(v)) return '';
+                                    const format = min => {
+                                        const h = Math.floor(min / 60);
+                                        const m = min % 60;
+                                        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                                    };
+                                    return context.dataset.label + ': ' + format(v[0]) + ' às ' + format(v[1]);
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         x: {
+                            type: 'linear',
+                            min: 360,  // Fixa início às 06:00 (6 * 60 min)
+                            max: 1320, // Fixa término às 22:00 (22 * 60 min)
                             grid: { color: '#1f1f1f' },
-                            ticks: { color: '#737373', font: { family: 'monospace', size: 10 } },
-                            min: 0,
-                            max: 12
+                            ticks: { 
+                                color: '#737373', 
+                                stepSize: 120, // Divide a escala de 2 em 2 horas
+                                font: { family: 'monospace', size: 10 },
+                                callback: function(value) {
+                                    const h = Math.floor(value / 60);
+                                    return String(h).padStart(2, '0') + ':00';
+                                }
+                            }
                         },
                         y: {
                             grid: { display: false },
