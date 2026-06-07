@@ -3,231 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Ponto Inteligente</title>
+    <title>Controle de Ponto & Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen text-gray-800">
+<body class="bg-[#0b0b0b] font-sans min-h-screen text-gray-200 antialiased">
 
     <div class="max-w-6xl mx-auto px-4 py-8">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8 bg-[#121212] p-6 rounded-2xl border border-gray-800 shadow-xl gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Meu Controle de Ponto</h1>
-                <p class="text-sm text-gray-500">Conexão direta com o Google Sheets</p>
+                <h1 class="text-xl font-bold text-white tracking-wide">Controle de Ponto Inteligente</h1>
+                <p class="text-xs text-gray-500 mt-0.5">Sincronizado diretamente com o Google Sheets</p>
             </div>
-            <div class="mt-4 md:mt-0 flex items-center gap-4">
-                <input type="date" id="date-input" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-inner font-semibold">
-                <div id="relogio" class="text-xl font-mono font-bold bg-gray-900 text-emerald-400 px-4 py-2 rounded-xl shadow-md">00:00:00</div>
+            <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
+                <input type="date" id="date-input" class="bg-[#1a1a1a] border border-gray-800 text-white text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-inner font-semibold outline-none cursor-pointer">
+                <div id="relogio" class="text-lg font-mono font-bold bg-[#1a1a1a] text-blue-500 border border-gray-800 px-4 py-2 rounded-xl shadow-md min-w-[100px] text-center">00:00:00</div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
-                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span class="w-2 h-4 bg-blue-600 rounded-full"></span> Registrar Horário
+            <div class="bg-[#121212] p-6 rounded-2xl border border-gray-800 shadow-xl h-fit">
+                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-5 flex items-center gap-2">
+                    <span class="w-1.5 h-3.5 bg-blue-600 rounded-full"></span> Registrar Horário
                 </h2>
                 
                 <div class="flex flex-col gap-3">
-                    <button onclick="registrarPonto('checkin')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                    <button onclick="registrarPonto('checkin')" class="w-full bg-[#1c2e24] hover:bg-[#223b2e] text-emerald-400 border border-emerald-900/50 font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center group">
                         <span>Fazer Check-in</span>
-                        <span class="text-xs bg-emerald-500 px-2 py-1 rounded">Entrada</span>
+                        <span class="text-[10px] bg-emerald-950 px-2 py-1 rounded text-emerald-500 font-bold uppercase tracking-wider">Entrada</span>
                     </button>
                     
-                    <button onclick="registrarPonto('pausa')" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                    <button onclick="registrarPonto('pausa')" class="w-full bg-[#362615] hover:bg-[#422e19] text-amber-400 border border-amber-900/50 font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center group">
                         <span>Pausa Almoço</span>
-                        <span class="text-xs bg-amber-400 px-2 py-1 rounded">Saída Almoço</span>
+                        <span class="text-[10px] bg-amber-950 px-2 py-1 rounded text-amber-500 font-bold uppercase tracking-wider">Almoço</span>
                     </button>
                     
-                    <button onclick="registrarPonto('retorno')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                    <button onclick="registrarPonto('retorno')" class="w-full bg-[#1b223c] hover:bg-[#212b4d] text-indigo-400 border border-indigo-900/50 font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center group">
                         <span>Retorno Almoço</span>
-                        <span class="text-xs bg-indigo-500 px-2 py-1 rounded">Volta Almoço</span>
+                        <span class="text-[10px] bg-indigo-950 px-2 py-1 rounded text-indigo-500 font-bold uppercase tracking-wider">Retorno</span>
                     </button>
                     
-                    <button onclick="registrarPonto('checkout')" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center">
+                    <button onclick="registrarPonto('checkout')" class="w-full bg-[#36191d] hover:bg-[#451f24] text-rose-400 border border-rose-900/50 font-semibold py-3.5 px-4 rounded-xl transition duration-200 shadow-sm flex justify-between items-center group">
                         <span>Fazer Check-out</span>
-                        <span class="text-xs bg-rose-500 px-2 py-1 rounded">Saída</span>
+                        <span class="text-[10px] bg-rose-950 px-2 py-1 rounded text-rose-500 font-bold uppercase tracking-wider">Saída</span>
                     </button>
                 </div>
                 
-                <p id="status-envio" class="text-center text-sm font-medium mt-4 text-gray-500 hidden"></p>
+                <p id="status-envio" class="text-center text-xs font-medium mt-4 text-gray-500 hidden"></p>
             </div>
 
-            <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="lg:col-span-2 bg-[#121212] p-6 rounded-2xl shadow-xl border border-gray-800 flex flex-col sm:flex-row gap-6">
                 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Dias Registrados</p>
-                        <p id="card-total-dias" class="text-3xl font-bold text-gray-900 mt-1">--</p>
-                    </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Última Entrada</p>
-                        <p id="card-ultimo-checkin" class="text-3xl font-bold text-emerald-600 mt-1">--:--</p>
-                    </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Última Saída</p>
-                        <p id="card-ultimo-checkout" class="text-3xl font-bold text-rose-600 mt-1">--:--</p>
+                <div class="flex-1 bg-[#1a1a1a] p-5 rounded-xl border border-gray-800 flex flex-col">
+                    <h3 class="text-xs font-semibold text-gray-400 mb-4 tracking-wide uppercase">Rendimento Semanal (Horas)</h3>
+                    <div class="h-52 relative w-full flex-1">
+                        <canvas id="graficoSemanal"></canvas>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex-1">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <span class="w-2 h-4 bg-emerald-500 rounded-full"></span> Histórico de Registros
-                        </h2>
-                        <button onclick="carregarDadosDashboard()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-1.5 px-3 rounded-lg border border-gray-200 transition">
-                            Atualizar Tabela
-                        </button>
+                <div class="w-full sm:w-64 flex flex-col gap-4 justify-between">
+                    <div class="bg-[#1a1a1a] p-4 rounded-xl border border-gray-800 flex flex-col justify-center h-full">
+                        <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Total da Semana</p>
+                        <p id="total-semana" class="text-2xl font-bold text-white mt-1">00h 00m</p>
                     </div>
                     
-                    <div class="overflow-x-auto max-h-80 overflow-y-auto">
-                        <table class="w-full text-sm text-left text-gray-500">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 border-b border-gray-100">
-                                <tr>
-                                    <th class="px-6 py-3">Data</th>
-                                    <th class="px-6 py-3">Entrada</th>
-                                    <th class="px-6 py-3">Almoço</th>
-                                    <th class="px-6 py-3">Retorno</th>
-                                    <th class="px-6 py-3">Saída</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabela-historico">
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-gray-400">Carregando dados da planilha...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="bg-[#1a1a1a] p-4 rounded-xl border border-gray-800 flex flex-col justify-center h-full">
+                        <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Média por Dia</p>
+                        <p id="media-dia" class="text-2xl font-bold text-white mt-1">00h 00m</p>
+                    </div>
+                    
+                    <div class="bg-[#1a1a1a] p-4 rounded-xl border border-gray-800 flex flex-col justify-center h-full">
+                        <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wider">Média de Almoço</p>
+                        <p id="media-almoco" class="text-2xl font-bold text-white mt-1">00h 00m</p>
                     </div>
                 </div>
 
             </div>
         </div>
+
+        <div class="bg-[#121212] rounded-2xl shadow-xl border border-gray-800 overflow-hidden">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-[#151515]">
+                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-1.5 h-3.5 bg-blue-500 rounded-full"></span> Histórico Base de Dados
+                </h2>
+                <button onclick="carregarDadosDashboard()" class="text-xs bg-[#1a1a1a] hover:bg-[#222] text-gray-300 font-semibold py-1.5 px-3 rounded-lg border border-gray-800 transition">
+                    Sincronizar Agora
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                <table class="w-full text-sm text-left text-gray-400">
+                    <thead class="text-xs text-gray-500 uppercase bg-[#161616] sticky top-0 border-b border-gray-800 z-10">
+                        <tr>
+                            <th class="px-6 py-3.5">Data</th>
+                            <th class="px-6 py-3.5">Check-In</th>
+                            <th class="px-6 py-3.5">Pausa Início</th>
+                            <th class="px-6 py-3.5">Pausa Fim</th>
+                            <th class="px-6 py-3.5">Check-out</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-historico" class="divide-y divide-gray-800/50">
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">Conectando ao banco de dados da planilha...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // ==========================================
-        // SUBSTUIA AQUI PELA SUA URL DO APPS SCRIPT
-        // ==========================================
+        // =======================================================
+        // ADICIONE SUA URL DO GOOGLE APPS SCRIPT ATUALIZADA AQUI
+        // =======================================================
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwl5haXOIkaQ8nyg1xYHq9bBRWTmlUEhb0kAytd0DZ8UT7wMsZjj9LLdJ8eOIgK31WwVg/exec";
 
         const dateInput = document.getElementById('date-input');
         const statusEnvio = document.getElementById('status-envio');
+        let meuGrafico = null;
 
-        // Configurações Iniciais ao Carregar a Página
+        // Configuração Inicial no Carregamento
         window.onload = function() {
-            // Define o input de data para o dia atual no fuso local do navegador
+            // Seta o calendário padrão do dia no formato ISO local
             const hoje = new Date();
             const ano = hoje.getFullYear();
             const mes = String(hoje.getMonth() + 1).padStart(2, '0');
             const dia = String(hoje.getDate()).padStart(2, '0');
             dateInput.value = `${ano}-${mes}-${dia}`;
 
-            // Inicia o relógio em tempo real
-            setInterval(atualizarRelogio, 1000);
+            // Start do Relógio
+            setInterval(() => {
+                document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-BR');
+            }, 1000);
 
-            // Carrega os dados do dashboard vindos da planilha
+            // Carrega os dados direto na View
             carregarDadosDashboard();
         };
 
-        // Relógio digital do cabeçalho
-        function atualizarRelogio() {
-            const agora = new Date();
-            document.getElementById('relogio').innerText = agora.toLocaleTimeString('pt-BR');
-        }
-
-        // FUNÇÃO 1: Envia o ponto clicado para a Planilha (POST)
+        // Envio do Ponto (POST)
         function registrarPonto(acao) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("SUA_URL")) {
-                alert("Por favor, configure a URL do seu Apps Script no código HTML.");
+                alert("Por favor, cole a URL de Implantação do seu Apps Script no código.");
                 return;
             }
 
-            statusEnvio.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
-            statusEnvio.classList.add('text-gray-600');
-            statusEnvio.innerText = "Registrando na planilha... Aguarde.";
-
-            const timestamp = new Date().toISOString();
+            statusEnvio.classList.remove('hidden', 'text-emerald-400', 'text-rose-400');
+            statusEnvio.classList.add('text-gray-400');
+            statusEnvio.innerText = "Sincronizando com a planilha...";
 
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Evita restrições de CORS do Google
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     acao: acao,
                     data: dateInput.value,
-                    hora_exata: timestamp
+                    hora_exata: new Date().toISOString()
                 })
             })
             .then(() => {
-                statusEnvio.classList.remove('text-gray-600');
-                statusEnvio.classList.add('text-emerald-600');
-                statusEnvio.innerText = `Sucesso! '${acao}' computado.`;
+                statusEnvio.classList.remove('text-gray-400');
+                statusEnvio.classList.add('text-emerald-400');
+                statusEnvio.innerText = `Sucesso! Registro de '${acao}' efetuado.`;
                 
-                // Aguarda 2 segundos e atualiza o dashboard para puxar a nova linha da planilha
                 setTimeout(() => {
                     statusEnvio.classList.add('hidden');
-                    carregarDadosDashboard();
+                    carregarDadosDashboard(); // Puxa dados novos do Sheets
                 }, 2000);
             })
             .catch(err => {
-                console.error('Erro ao enviar:', err);
-                statusEnvio.classList.remove('text-gray-600');
-                statusEnvio.classList.add('text-rose-600');
-                statusEnvio.innerText = "Erro ao registrar. Verifique o console.";
+                console.error(err);
+                statusEnvio.classList.remove('text-gray-400');
+                statusEnvio.classList.add('text-rose-400');
+                statusEnvio.innerText = "Erro ao registrar ponto.";
             });
         }
 
-        // FUNÇÃO 2: Busca todos os registros para alimentar o Dashboard (GET)
+        // Leitura do Banco de Dados (GET)
         function carregarDadosDashboard() {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("SUA_URL")) return;
 
             fetch(APPS_SCRIPT_URL)
-            .then(response => response.json())
-            .then(resultado => {
-                if (resultado.status === "success") {
-                    construirDashboard(resultado.dados);
-                } else {
-                    console.error("Erro no Apps Script:", resultado.message);
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === "success") {
+                    construirDashboard(res.dados);
                 }
             })
-            .catch(err => {
-                console.error("Erro ao carregar banco de dados:", err);
-            });
+            .catch(err => console.error("Erro na leitura de dados:", err));
         }
 
-        // FUNÇÃO 3: Processa os dados recebidos e monta os componentes visuais
+        // Processamento Matemático e Renderização Visual
         function construirDashboard(dados) {
             const tabelaBody = document.getElementById('tabela-historico');
-            
-            // Se a planilha estiver vazia
             if (!dados || dados.length === 0) {
-                tabelaBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">Nenhum registro encontrado na planilha.</td></tr>`;
-                document.getElementById('card-total-dias').innerText = "0";
+                tabelaBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-600">Sem registros na planilha.</td></tr>`;
                 return;
             }
 
-            // Atualiza os Cards Superiores baseados nos dados reais
-            document.getElementById('card-total-dias').innerText = dados.length;
-            
-            // Pega o último registro adicionado (mais recente)
-            const ultimoRegistro = dados[dados.length - 1];
-            document.getElementById('card-ultimo-checkin').innerText = ultimoRegistro.checkin || "--:--";
-            document.getElementById('card-ultimo-checkout').innerText = ultimoRegistro.checkout || "--:--";
+            // Conversão de Strings de tempo para inteiros de minutos
+            function timeToMinutes(str) {
+                if (!str || str === "-") return 0;
+                const p = str.split(":");
+                return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+            }
 
-            // Monta as linhas da tabela de histórico (em ordem inversa para o mais novo aparecer no topo)
+            function minutesToHoursStr(totalMin) {
+                const h = Math.floor(totalMin / 60);
+                const m = Math.round(totalMin % 60);
+                return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
+            }
+
+            // Descobrir a Segunda-feira da semana corrente
+            const hoje = new Date();
+            const diaSemana = hoje.getDay();
+            const gapSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+            const segundaDaSemana = new Date(hoje);
+            segundaDaSemana.setDate(hoje.getDate() + gapSegunda);
+            segundaDaSemana.setHours(0,0,0,0);
+
+            // Escala de Segunda (0) a Domingo (6)
+            let minTrabalhadosSemana = [0, 0, 0, 0, 0, 0, 0];
+            let contDiasTrabalhados = 0, contDiasAlmoco = 0;
+            let totalMinTrabalhados = 0, totalMinAlmoco = 0;
+
             let htmlLinhas = "";
+
+            // Loop invertido para mostrar dados recentes no topo da tabela
             for (let i = dados.length - 1; i >= 0; i--) {
                 const item = dados[i];
+                
+                // Normaliza a data da linha para objeto Date
+                let dataReg;
+                if (item.data.includes("-")) {
+                    const p = item.data.split("-");
+                    dataReg = new Date(p[0], p[1] - 1, p[2]);
+                } else {
+                    const p = item.data.split("/");
+                    dataReg = new Date(p[2], p[1] - 1, p[0]);
+                }
+                dataReg.setHours(0,0,0,0);
+
+                // Processa métricas caso pertença à semana atual
+                if (dataReg >= segundaDaSemana) {
+                    let dNum = dataReg.getDay();
+                    let idxSemana = dNum === 0 ? 6 : dNum - 1;
+
+                    const entry = timeToMinutes(item.checkin);
+                    const breakStart = timeToMinutes(item.pausa);
+                    const breakEnd = timeToMinutes(item.retorno);
+                    const exit = timeToMinutes(item.checkout);
+
+                    let diaLiquido = 0;
+                    if (entry && breakStart) diaLiquido += (breakStart - entry);
+                    if (breakEnd && exit) diaLiquido += (exit - breakEnd);
+                    if (entry && exit && !breakStart && !breakEnd) diaLiquido = (exit - entry);
+
+                    let diaAlmoco = (breakStart && breakEnd) ? (breakEnd - breakStart) : 0;
+
+                    if (diaLiquido > 0) {
+                        minTrabalhadosSemana[idxSemana] = diaLiquido;
+                        totalMinTrabalhados += diaLiquido;
+                        contDiasTrabalhados++;
+                    }
+                    if (diaAlmoco > 0) {
+                        totalMinAlmoco += diaAlmoco;
+                        contDiasAlmoco++;
+                    }
+                }
+
+                // Linha estruturada da tabela
                 htmlLinhas += `
-                    <tr class="bg-white border-b border-gray-100 hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 font-semibold text-gray-900">${item.data}</td>
-                        <td class="px-6 py-4 text-emerald-600 font-medium">${item.checkin || '-'}</td>
-                        <td class="px-6 py-4 text-amber-600">${item.pausa || '-'}</td>
-                        <td class="px-6 py-4 text-indigo-600">${item.retorno || '-'}</td>
-                        <td class="px-6 py-4 text-rose-600 font-medium">${item.checkout || '-'}</td>
+                    <tr class="border-b border-gray-900/40 bg-[#121212] hover:bg-[#161616] transition">
+                        <td class="px-6 py-3.5 text-white font-medium">${item.data}</td>
+                        <td class="px-6 py-3.5 text-emerald-400 font-mono">${item.checkin || '-'}</td>
+                        <td class="px-6 py-3.5 text-amber-500 font-mono">${item.pausa || '-'}</td>
+                        <td class="px-6 py-3.5 text-indigo-400 font-mono">${item.retorno || '-'}</td>
+                        <td class="px-6 py-3.5 text-rose-400 font-mono">${item.checkout || '-'}</td>
                     </tr>
                 `;
             }
+
             tabelaBody.innerHTML = htmlLinhas;
+
+            // Renderiza os Dados nos Cards Superiores
+            const medDia = contDiasTrabalhados > 0 ? (totalMinTrabalhados / contDiasTrabalhados) : 0;
+            const medAlm = contDiasAlmoco > 0 ? (totalMinAlmoco / contDiasAlmoco) : 0;
+
+            document.getElementById('total-semana').innerText = minutesToHoursStr(totalMinTrabalhados);
+            document.getElementById('media-dia').innerText = minutesToHoursStr(medDia);
+            document.getElementById('media-almoco').innerText = minutesToHoursStr(medAlm);
+
+            // Configuração do Gráfico Chart.js
+            const dadosHorasDecimais = minTrabalhadosSemana.map(m => parseFloat((m / 60).toFixed(2)));
+            const ctx = document.getElementById('graficoSemanal').getContext('2d');
+
+            if (meuGrafico) {
+                meuGrafico.destroy();
+            }
+
+            meuGrafico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [{
+                        data: dadosHorasDecimais,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 4,
+                        barThickness: 12
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: {
+                            grid: { color: '#1f1f1f' },
+                            ticks: { color: '#737373', font: { family: 'monospace', size: 10 } },
+                            min: 0,
+                            max: 12
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#e5e5e5', font: { weight: '600', size: 11 } }
+                        }
+                    }
+                }
+            });
         }
     </script>
 </body>
