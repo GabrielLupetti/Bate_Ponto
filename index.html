@@ -57,7 +57,7 @@
             <div class="lg:col-span-2 bg-[#121212] p-6 rounded-2xl shadow-xl border border-gray-800 flex flex-col sm:flex-row gap-6">
                 
                 <div class="flex-1 bg-[#1a1a1a] p-5 rounded-xl border border-gray-800 flex flex-col">
-                    <h3 class="text-xs font-semibold text-gray-400 mb-4 tracking-wide uppercase">Linha do Tempo Semanal (06h às 22h)</h3>
+                    <h3 class="text-xs font-semibold text-gray-400 mb-4 tracking-wide uppercase">Rendimento Semanal (Horas)</h3>
                     <div class="h-52 relative w-full flex-1">
                         <canvas id="graficoSemanal"></canvas>
                     </div>
@@ -138,7 +138,7 @@
                 document.getElementById('relogio').innerText = new Date().toLocaleTimeString('pt-BR');
             }, 1000);
 
-            // ESCUTADOR DO CALENDÁRIO: Recalcula tudo quando você muda a data
+            // Escutador do calendário: Atualiza o dashboard na hora ao mudar a data
             dateInput.addEventListener('change', () => {
                 if (window.dadosPlanilha) {
                     construirDashboard(window.dadosPlanilha);
@@ -193,7 +193,7 @@
             .then(res => res.json())
             .then(res => {
                 if (res.status === "success") {
-                    window.dadosPlanilha = res.dados; // Cache global para navegação rápida
+                    window.dadosPlanilha = res.dados; // Salva em cache para navegação rápida
                     construirDashboard(res.dados);
                 }
             })
@@ -207,7 +207,7 @@
                 return;
             }
 
-            // Conversão voltada para minutos inteiros
+            // Conversão com base em minutos inteiros
             function timeToMinutes(str) {
                 if (!str || str === "-") return 0;
                 const p = str.split(":");
@@ -222,7 +222,7 @@
                 return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
             }
 
-            // PEGA A DATA SELECIONADA NO CALENDÁRIO para descobrir o início daquela semana
+            // Captura a semana com base no dia clicado no calendário
             const dataFiltroRaw = dateInput.value;
             const dataSelecionada = new Date(dataFiltroRaw + 'T00:00:00');
             const diaSemana = dataSelecionada.getDay();
@@ -236,17 +236,16 @@
             domingoDaSemana.setDate(segundaDaSemana.getDate() + 6);
             domingoDaSemana.setHours(23,59,59,999);
 
-            // Vetores para blocos flutuantes do gráfico [Início, Fim] em minutos desde a meia-noite
-            let dataTurno1 = Array(7).fill(null);
-            let dataAlmoco = Array(7).fill(null);
-            let dataTurno2 = Array(7).fill(null);
+            // Vetores para acumular os minutos totais de cada dia
+            let minTrabalhadosSemana = Array(7).fill(0);
+            let minAlmocoSemana = Array(7).fill(0);
 
             let contDiasTrabalhados = 0, contDiasAlmoco = 0;
             let totalMinTrabalhados = 0, totalMinAlmoco = 0;
 
             let htmlLinhas = "";
 
-            // Varre o histórico completo
+            // Processamento da base de dados completo
             for (let i = dados.length - 1; i >= 0; i--) {
                 const item = dados[i];
                 
@@ -260,7 +259,6 @@
                 }
                 dataReg.setHours(0,0,0,0);
 
-                // Valida se o registro está contido na semana selecionada no calendário
                 if (dataReg >= segundaDaSemana && dataReg <= domingoDaSemana) {
                     let dNum = dataReg.getDay();
                     let idxSemana = dNum === 0 ? 6 : dNum - 1;
@@ -270,17 +268,7 @@
                     const breakEnd = timeToMinutes(item.retorno);
                     const exit = timeToMinutes(item.checkout);
 
-                    // Preenche os blocos da linha do tempo do gráfico
-                    if (entry && breakStart) dataTurno1[idxSemana] = [entry, breakStart];
-                    if (breakStart && breakEnd) dataAlmoco[idxSemana] = [breakStart, breakEnd];
-                    if (breakEnd && exit) dataTurno2[idxSemana] = [breakEnd, exit];
-                    
-                    // Caso simplificado: bateu entrada/saída direto sem almoço
-                    if (entry && exit && !breakStart && !breakEnd) {
-                        dataTurno1[idxSemana] = [entry, exit];
-                    }
-
-                    // Lógica matemática dos cards líquidos
+                    // Cálculo matemático do tempo líquido
                     let diaLiquido = 0;
                     if (entry && breakStart) diaLiquido += (breakStart - entry);
                     if (breakEnd && exit) diaLiquido += (exit - breakEnd);
@@ -289,16 +277,17 @@
                     let diaAlmoco = (breakStart && breakEnd) ? (breakEnd - breakStart) : 0;
 
                     if (diaLiquido > 0) {
+                        minTrabalhadosSemana[idxSemana] = diaLiquido;
                         totalMinTrabalhados += diaLiquido;
                         contDiasTrabalhados++;
                     }
                     if (diaAlmoco > 0) {
+                        minAlmocoSemana[idxSemana] = diaAlmoco;
                         totalMinAlmoco += diaAlmoco;
                         contDiasAlmoco++;
                     }
                 }
 
-                // Alimenta a tabela visual
                 htmlLinhas += `
                     <tr class="border-b border-gray-900/40 bg-[#121212] hover:bg-[#161616] transition">
                         <td class="px-6 py-3.5 text-white font-medium">${item.data}</td>
@@ -312,7 +301,7 @@
 
             tabelaBody.innerHTML = htmlLinhas;
 
-            // Renderiza textos dos cards superiores
+            // Renderização das métricas dos cards
             const medDia = contDiasTrabalhados > 0 ? (totalMinTrabalhados / contDiasTrabalhados) : 0;
             const medAlm = contDiasAlmoco > 0 ? (totalMinAlmoco / contDiasAlmoco) : 0;
 
@@ -320,7 +309,10 @@
             document.getElementById('media-dia').innerText = minutesToHoursStr(medDia);
             document.getElementById('media-almoco').innerText = minutesToHoursStr(medAlm);
 
-            // CONFIGURAÇÃO DA TIMELINE DO CHART.JS
+            // Converte os minutos acumulados em frações de horas para plotagem decimal correta
+            const dadosTrabalhoHoras = minTrabalhadosSemana.map(m => parseFloat((m / 60).toFixed(2)));
+            const dadosAlmocoHoras = minAlmocoSemana.map(m => parseFloat((m / 60).toFixed(2)));
+
             const ctx = document.getElementById('graficoSemanal').getContext('2d');
             if (meuGrafico) {
                 meuGrafico.destroy();
@@ -332,70 +324,48 @@
                     labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
                     datasets: [
                         {
-                            label: 'Período Manhã',
-                            data: dataTurno1,
+                            label: 'Trabalho',
+                            data: dadosTrabalhoHoras,
                             backgroundColor: '#2563eb', // Azul
                             borderRadius: 4,
-                            borderSkipped: false,
-                            barThickness: 14,
-                            grouped: false // Força os blocos a ficarem na mesma linha
+                            barThickness: 10
                         },
                         {
-                            label: 'Intervalo Almoço',
-                            data: dataAlmoco,
-                            backgroundColor: '#eab308', // Amarelo Destaque
+                            label: 'Almoço',
+                            data: dadosAlmocoHoras,
+                            backgroundColor: '#eab308', // Amarelo
                             borderRadius: 4,
-                            borderSkipped: false,
-                            barThickness: 14,
-                            grouped: false
-                        },
-                        {
-                            label: 'Período Tarde',
-                            data: dataTurno2,
-                            backgroundColor: '#2563eb', // Azul
-                            borderRadius: 4,
-                            borderSkipped: false,
-                            barThickness: 14,
-                            grouped: false
+                            barThickness: 10
                         }
                     ]
                 },
                 options: {
-                    indexAxis: 'y', // Gráfico horizontal
+                    indexAxis: 'y', // Mantém visualização por barras horizontais
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { 
-                        legend: { display: false },
+                        legend: { display: true, labels: { color: '#a3a3a3', font: { size: 11 } } },
                         tooltip: {
                             callbacks: {
-                                // Deixa o balão de dica legível com as horas exatas ao passar o mouse
+                                // Formata o balão ao passar o mouse para ler: "Trabalho: Xh XXm"
                                 label: function(context) {
-                                    const v = context.raw;
-                                    if (!v || !Array.isArray(v)) return '';
-                                    const format = min => {
-                                        const h = Math.floor(min / 60);
-                                        const m = min % 60;
-                                        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-                                    };
-                                    return context.dataset.label + ': ' + format(v[0]) + ' às ' + format(v[1]);
+                                    const valHorasDec = context.raw;
+                                    if (valHorasDec === 0) return context.dataset.label + ': 00h 00m';
+                                    const totalMinutos = Math.round(valHorasDec * 60);
+                                    const h = Math.floor(totalMinutos / 60);
+                                    const m = totalMinutos % 60;
+                                    return context.dataset.label + ': ' + h + 'h ' + String(m).padStart(2, '0') + 'm';
                                 }
                             }
                         }
                     },
                     scales: {
                         x: {
-                            type: 'linear',
-                            min: 360,  // Fixa início às 06:00 (6 * 60 min)
-                            max: 1320, // Fixa término às 22:00 (22 * 60 min)
                             grid: { color: '#1f1f1f' },
                             ticks: { 
                                 color: '#737373', 
-                                stepSize: 120, // Divide a escala de 2 em 2 horas
                                 font: { family: 'monospace', size: 10 },
-                                callback: function(value) {
-                                    const h = Math.floor(value / 60);
-                                    return String(h).padStart(2, '0') + ':00';
-                                }
+                                callback: function(value) { return value + 'h'; } // Eixo X em escala de horas completas
                             }
                         },
                         y: {
